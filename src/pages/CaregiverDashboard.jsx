@@ -1,22 +1,24 @@
 import React, { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
-import { ArrowRight, Check, Camera, Mic, UploadCloud } from 'lucide-react';
+import { ArrowRight, Check, Camera, Mic, UploadCloud, Activity, UserPlus } from 'lucide-react';
 import AudioRecorder from '../components/AudioRecorder';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 /*
-  Caregiver Dashboard - Typeform Style
+  Caregiver Dashboard
+  - Tab 1: Enrollment (Typeform Style)
+  - Tab 2: Analytics (Memory Progress)
 */
 
-const API_BASE = import.meta.env.VITE_API_URL || "/api/v1";
+const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:8000/api/v1";
 
-const CaregiverDashboard = () => {
+const EnrollmentView = () => {
     const [step, setStep] = useState(0);
     const [formData, setFormData] = useState({ name: '', relation: '', notes: '', age: '' });
     const [file, setFile] = useState(null);
     const [filePreview, setFilePreview] = useState(null);
     const [audioBlob, setAudioBlob] = useState(null);
-    const [status, setStatus] = useState(null); // 'submitting', 'success', 'error'
-
+    const [status, setStatus] = useState(null);
     const inputRef = useRef(null);
 
     useEffect(() => {
@@ -30,7 +32,7 @@ const CaregiverDashboard = () => {
     };
 
     const handleKeyDown = (e) => {
-        if (e.key === 'Enter' && step !== 3) handleNext(); // Step 3 is Notes (TextArea)
+        if (e.key === 'Enter' && step !== 3) handleNext();
     };
 
     const handleSubmit = async () => {
@@ -62,6 +64,15 @@ const CaregiverDashboard = () => {
             setStatus('error');
         }
     };
+
+    if (status === 'success') {
+        return (
+            <div className="success-screen">
+                <h1>All done! 🎉</h1>
+                <p>Memory has been securely stored.</p>
+            </div>
+        );
+    }
 
     const renderStep = () => {
         switch (step) {
@@ -152,126 +163,210 @@ const CaregiverDashboard = () => {
         }
     };
 
-    if (status === 'success') {
-        return (
-            <div className="success-screen">
-                <h1>All done! 🎉</h1>
-                <p>Memory has been securely stored.</p>
-            </div>
-        );
-    }
+    return (
+        <div className="enroll-wrapper">
+            <div className="progress-bar" style={{ width: `${(step + 1) * 25}%` }}></div>
+            {renderStep()}
+        </div>
+    );
+}
+
+const AnalyticsView = () => {
+    const [stats, setStats] = useState(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchStats = async () => {
+            try {
+                const res = await axios.get(`${API_BASE}/quiz/stats`);
+                setStats(res.data);
+            } catch (error) {
+                console.error("Failed to fetch stats", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchStats();
+    }, []);
+
+    if (loading) return <div className="flex-center">Loading Analytics...</div>;
+
+    if (!stats || stats.history.length === 0) return (
+        <div className="empty-state">
+            <h2>No Memory Data Yet</h2>
+            <p>Once the patient starts interacting with the memory quiz, data will appear here.</p>
+        </div>
+    );
 
     return (
-        <div className="tf-container">
-            {/* Progress Bar */}
-            <div className="progress-bar" style={{ width: `${(step + 1) * 25}%` }}></div>
+        <div className="analytics-container">
+            <div className="stats-header">
+                <div className="stat-card">
+                    <h3>Average Accuracy</h3>
+                    <div className="stat-value">{(stats.average_score * 100).toFixed(1)}%</div>
+                </div>
+                <div className="stat-card">
+                    <h3>Total Interactions</h3>
+                    <div className="stat-value">{stats.total_quizzes}</div>
+                </div>
+            </div>
 
-            <div className="tf-wrapper">
-                {renderStep()}
+            <div className="chart-wrapper">
+                <h3>Memory Recall Trend</h3>
+                <ResponsiveContainer width="100%" height={300}>
+                    <LineChart data={stats.history}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                        <XAxis dataKey="date" stroke="#94a3b8" tickFormatter={(t) => t.split(' ')[0]} />
+                        <YAxis stroke="#94a3b8" domain={[0, 1]} />
+                        <Tooltip
+                            contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155' }}
+                            itemStyle={{ color: '#a78bfa' }}
+                        />
+                        <Line type="monotone" dataKey="score" stroke="#8b5cf6" strokeWidth={3} activeDot={{ r: 8 }} />
+                    </LineChart>
+                </ResponsiveContainer>
+            </div>
+
+            <div className="recent-activity">
+                <h3>Recent Activity</h3>
+                <ul>
+                    {stats.history.slice(0, 5).map((item, idx) => (
+                        <li key={idx} className="activity-item">
+                            <span>{item.date}</span>
+                            <span className={`score-badge ${item.score > 0.8 ? 'high' : item.score > 0.5 ? 'med' : 'low'}`}>
+                                {(item.score * 100).toFixed(0)}%
+                            </span>
+                        </li>
+                    ))}
+                </ul>
+            </div>
+        </div>
+    );
+};
+
+const CaregiverDashboard = () => {
+    const [activeTab, setActiveTab] = useState('enroll'); // 'enroll' | 'analytics'
+
+    return (
+        <div className="dashboard-container">
+            <div className="tabs">
+                <div className={`tab ${activeTab === 'enroll' ? 'active' : ''}`} onClick={() => setActiveTab('enroll')}>
+                    <UserPlus size={20} />
+                    Enrollment
+                </div>
+                <div className={`tab ${activeTab === 'analytics' ? 'active' : ''}`} onClick={() => setActiveTab('analytics')}>
+                    <Activity size={20} />
+                    Analytics
+                </div>
+            </div>
+
+            <div className="dashboard-content">
+                {activeTab === 'enroll' ? <EnrollmentView /> : <AnalyticsView />}
             </div>
 
             <style>{`
-        .tf-container {
-            min-height: 100vh;
-            background: #0f172a;
-            color: white;
-            font-family: 'Inter', system-ui, sans-serif;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            position: relative;
-        }
-        .progress-bar {
-            position: absolute;
-            top: 0;
-            left: 0;
-            height: 4px;
-            background: #8b5cf6;
-            transition: width 0.5s ease;
-        }
-        .tf-wrapper {
-            width: 100%;
-            max-width: 700px;
-            padding: 20px;
-            animation: fadeIn 0.5s ease-out;
-        }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+                .dashboard-container {
+                    min-height: 100vh;
+                    background: #0f172a;
+                    color: white;
+                    font-family: 'Inter', system-ui, sans-serif;
+                    padding-top: 20px;
+                }
+                .tabs {
+                    display: flex;
+                    justify-content: center;
+                    gap: 20px;
+                    margin-bottom: 40px;
+                }
+                .tab {
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    padding: 10px 20px;
+                    background: rgba(30, 41, 59, 0.5);
+                    border-radius: 20px;
+                    cursor: pointer;
+                    color: #94a3b8;
+                    transition: 0.2s;
+                    border: 1px solid transparent;
+                }
+                .tab:hover { background: rgba(30, 41, 59, 0.8); color: white; }
+                .tab.active {
+                    background: #8b5cf6;
+                    color: white;
+                    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+                }
 
-        .step-number { font-size: 1.2rem; color: #8b5cf6; margin-bottom: 10px; display: flex; align-items: center; gap: 10px; }
-        .arrow { font-size: 1.5rem; }
-        
-        .question { font-size: 2.5rem; margin-bottom: 15px; font-weight: 300; line-height: 1.2; }
-        .sub-text { font-size: 1.2rem; color: #94a3b8; margin-bottom: 40px; }
+                .enroll-wrapper {
+                    display: flex;
+                    justify-content: center;
+                    max-width: 800px;
+                    margin: 0 auto;
+                    position: relative;
+                }
+                
+                /* Analytics Styles */
+                .analytics-container {
+                    max-width: 900px;
+                    margin: 0 auto;
+                    padding: 20px;
+                }
+                .stats-header {
+                    display: grid;
+                    grid-template-columns: 1fr 1fr;
+                    gap: 20px;
+                    margin-bottom: 30px;
+                }
+                .stat-card {
+                    background: rgba(30, 41, 59, 0.5);
+                    padding: 20px;
+                    border-radius: 16px;
+                    border: 1px solid #334155;
+                    text-align: center;
+                }
+                .stat-card h3 { color: #94a3b8; margin: 0 0 10px; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; }
+                .stat-value { font-size: 3rem; font-weight: bold; color: white; }
+                
+                .chart-wrapper {
+                    background: rgba(30, 41, 59, 0.5);
+                    padding: 30px;
+                    border-radius: 24px;
+                    border: 1px solid #334155;
+                    margin-bottom: 30px;
+                }
+                .chart-wrapper h3 { margin-top: 0; margin-bottom: 20px; }
 
-        .big-input {
-            width: 100%;
-            background: transparent;
-            border: none;
-            border-bottom: 2px solid rgba(255,255,255,0.2);
-            color: #a78bfa;
-            font-size: 2rem;
-            padding: 10px 0;
-            outline: none;
-            transition: 0.3s;
-            display: block;
-            margin-bottom: 30px;
-        }
-        .big-input:focus { border-color: #8b5cf6; }
-        .big-input::placeholder { color: rgba(255,255,255,0.1); }
-        .textarea { height: 100px; resize: none; font-size: 1.5rem; }
+                .recent-activity h3 { border-bottom: 1px solid #334155; padding-bottom: 10px; margin-bottom: 15px; }
+                .activity-item {
+                    display: flex;
+                    justify-content: space-between;
+                    padding: 15px 0;
+                    border-bottom: 1px solid rgba(255,255,255,0.05);
+                }
+                .score-badge { padding: 4px 12px; border-radius: 12px; font-weight: bold; font-size: 0.9rem; }
+                .score-badge.high { background: rgba(16, 185, 129, 0.2); color: #10b981; }
+                .score-badge.med { background: rgba(245, 158, 11, 0.2); color: #f59e0b; }
+                .score-badge.low { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
 
-        .btn-next {
-            background: #8b5cf6;
-            color: white;
-            border: none;
-            padding: 12px 24px;
-            border-radius: 4px;
-            font-size: 1.2rem;
-            font-weight: bold;
-            cursor: pointer;
-            display: inline-flex;
-            align-items: center;
-            gap: 10px;
-            transition: 0.2s;
-        }
-        .btn-next:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(139, 92, 246, 0.4); }
+                .empty-state { text-align: center; padding: 50px; color: #94a3b8; }
 
-        .upload-box {
-            border: 2px dashed #475569;
-            border-radius: 12px;
-            padding: 40px;
-            text-align: center;
-            cursor: pointer;
-            transition: 0.2s;
-            margin-bottom: 30px;
-        }
-        .upload-box:hover { border-color: #8b5cf6; background: rgba(139, 92, 246, 0.05); }
-        .upload-placeholder { color: #94a3b8; display: flex; flex-direction: column; align-items: center; gap: 10px; }
-        .preview-img { max-height: 300px; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-        
-        .btn-submit {
-            background: #10b981;
-            color: white;
-            border: none;
-            padding: 15px 40px;
-            border-radius: 30px;
-            font-size: 1.5rem;
-            font-weight: bold;
-            cursor: pointer;
-            transition: 0.2s;
-            display: block;
-            margin-top: 20px;
-        }
-        .btn-submit:hover { transform: scale(1.05); box-shadow: 0 10px 30px rgba(16, 185, 129, 0.4); }
-
-        .success-screen {
-            height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; 
-            background: #0f172a; color: white; text-align: center;
-        }
-        .success-screen h1 { font-size: 4rem; margin-bottom: 20px; color: #10b981; }
-        
-        .voice-opt { margin-bottom: 30px; display: flex; align-items: center; }
-      `}</style>
+                /* RECYCLED ENROLLMENT STYLES */
+                .progress-bar { position: absolute; top: 0; left: 0; height: 4px; background: #8b5cf6; transition: width 0.5s ease; }
+                .step-number { font-size: 1.2rem; color: #8b5cf6; margin-bottom: 10px; display: flex; align-items: center; gap: 10px; }
+                .arrow { font-size: 1.5rem; }
+                .question { font-size: 2.5rem; margin-bottom: 15px; font-weight: 300; line-height: 1.2; }
+                .sub-text { font-size: 1.2rem; color: #94a3b8; margin-bottom: 40px; }
+                .big-input { width: 100%; background: transparent; border: none; border-bottom: 2px solid rgba(255,255,255,0.2); color: #a78bfa; font-size: 2rem; padding: 10px 0; outline: none; margin-bottom: 30px; }
+                .big-input:focus { border-color: #8b5cf6; }
+                .textarea { height: 100px; resize: none; font-size: 1.5rem; }
+                .btn-next { background: #8b5cf6; color: white; border: none; padding: 12px 24px; border-radius: 4px; font-size: 1.2rem; font-weight: bold; cursor: pointer; display: inline-flex; align-items: center; gap: 10px; }
+                .upload-box { border: 2px dashed #475569; border-radius: 12px; padding: 40px; text-align: center; cursor: pointer; margin-bottom: 30px; }
+                .preview-img { max-height: 300px; border-radius: 8px; }
+                .btn-submit { background: #10b981; color: white; border: none; padding: 15px 40px; border-radius: 30px; font-size: 1.5rem; font-weight: bold; cursor: pointer; margin-top: 20px; }
+                .success-screen { height: 50vh; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
+                .success-screen h1 { font-size: 3rem; color: #10b981; }
+                .voice-opt { margin-bottom: 30px; display: flex; align-items: center; }
+            `}</style>
         </div>
     );
 };

@@ -56,6 +56,22 @@ function App() {
   };
 
   useEffect(() => {
+    // 1. Setup Axios Interceptor
+    const token = localStorage.getItem('token');
+    if (token) {
+      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    }
+
+    // 2. Auto-Login check
+    const savedRole = localStorage.getItem('role');
+    if (token && savedRole) {
+      if (savedRole === 'caregiver') setView('caregiver');
+      else {
+        setView('patient');
+        setMode('person'); // Default mode
+      }
+    }
+
     setSuggestions([
       "Who is this?",
       "Where is my wallet?",
@@ -63,6 +79,13 @@ function App() {
       "Enroll new object"
     ]);
   }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('role');
+    delete axios.defaults.headers.common['Authorization'];
+    setView('landing');
+  };
 
   const handleSuggestionClick = (text) => {
     if (text === "Enroll new person") {
@@ -216,9 +239,13 @@ function App() {
       const data = res.data;
       if (data.status === 'found') {
         responseText = data.text;
-        if (data.audio_base64) {
+
+        // Prioritize Person's Real Audio for the "Play Audio" button
+        const audioSource = data.person_audio || data.audio_base64;
+
+        if (audioSource) {
           try {
-            const binaryString = window.atob(data.audio_base64);
+            const binaryString = window.atob(audioSource);
             const bytes = new Uint8Array(binaryString.length);
             for (let i = 0; i < binaryString.length; i++) {
               bytes[i] = binaryString.charCodeAt(i);
@@ -362,7 +389,7 @@ function App() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#0f172a', overflow: 'hidden' }}>
-      <NavBar onViewChange={setView} currentView={view} />
+      <NavBar onViewChange={setView} currentView={view} onLogout={handleLogout} />
       <div style={{ flex: 1, paddingTop: '70px', height: '100%', overflow: 'hidden' }}>
         {content}
       </div>

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Home, Users, Settings, Menu, Brain, Bell } from 'lucide-react';
+import { Home, Users, Settings, Menu, Brain, Bell, LogOut } from 'lucide-react';
 import { subscribeToPush } from '../utils/push';
 
 const NavBar = ({ onViewChange, currentView }) => {
@@ -43,6 +43,11 @@ const NavBar = ({ onViewChange, currentView }) => {
                     <div className={`nav-item ${pushEnabled ? 'active' : ''}`} onClick={handlePushEnable} title="Enable Reminders">
                         <Bell size={20} />
                         <span>{pushEnabled ? 'On' : 'Enable Push'}</span>
+                    </div>
+
+                    <div className="nav-item logout-btn" onClick={onLogout}>
+                        <LogOut size={20} />
+                        <span>Logout</span>
                     </div>
                 </div>
             </div>
