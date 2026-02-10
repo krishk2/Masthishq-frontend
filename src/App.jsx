@@ -153,7 +153,21 @@ function App() {
 
       if (mode === 'person' && data.status === 'identified') {
         setCurrentPerson(data.person);
-        addBotMessage(`I see ${data.person.name}.`);
+
+        let audioUrl = null;
+        if (data.person.audio) {
+          try {
+            const binaryString = window.atob(data.person.audio);
+            const bytes = new Uint8Array(binaryString.length);
+            for (let i = 0; i < binaryString.length; i++) {
+              bytes[i] = binaryString.charCodeAt(i);
+            }
+            const blob = new Blob([bytes], { type: 'audio/webm' });
+            audioUrl = URL.createObjectURL(blob);
+          } catch (e) { console.error("Audio decode error", e); }
+        }
+
+        addBotMessage(`I see ${data.person.name}.`, audioUrl);
         updateSuggestions(data.person);
         speakResponse(`Hello ${data.person.name}.`);
       } else if (mode === 'object' && data.status === 'identified') {

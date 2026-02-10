@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
 import { ArrowRight, Check, Camera, Mic, UploadCloud, Activity, UserPlus, List, CheckCircle, Circle, Trash2, RefreshCw } from 'lucide-react';
+import AudioRecorder from '../components/AudioRecorder';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:8000/api/v1";
@@ -13,6 +14,7 @@ const EnrollmentView = () => {
     const [images, setImages] = useState([]);
     const [preview, setPreview] = useState(null);
     const [isRecording, setIsRecording] = useState(false);
+    const [audioBlob, setAudioBlob] = useState(null);
     const fileInputRef = useRef(null);
 
     const handleImageUpload = (e) => {
@@ -33,11 +35,11 @@ const EnrollmentView = () => {
         formData.append('name', name);
         formData.append('relation', relation);
         formData.append('notes', notes);
-        if (images[0]) formData.append('files', images[0]);
-        // Audio would be appended here if implemented
+        if (images[0]) formData.append('file', images[0]);
+        if (audioBlob) formData.append('audio_file', audioBlob, 'voice.webm');
 
         try {
-            await axios.post(`${API_BASE}/memory/learn_face`, formData, {
+            await axios.post(`${API_BASE}/remember/person`, formData, {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
             setStep(5);
@@ -89,9 +91,8 @@ const EnrollmentView = () => {
                     <input type="file" ref={fileInputRef} hidden onChange={handleImageUpload} />
 
                     <div className="voice-opt">
-                        <button className={`btn-next ${isRecording ? 'bg-red-500' : 'bg-blue-500'}`} onClick={toggleRecording}>
-                            <Mic /> {isRecording ? "Stop Recording" : "Record Voice Sample (Optional)"}
-                        </button>
+                        <label className="text-sm font-medium text-slate-400 mb-2 block">Voice Sample (Optional)</label>
+                        <AudioRecorder onRecordingComplete={setAudioBlob} />
                     </div>
 
                     <button className="btn-submit" onClick={handleSubmit}>Finish Enrollment</button>
