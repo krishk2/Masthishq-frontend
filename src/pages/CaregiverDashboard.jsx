@@ -36,18 +36,24 @@ const EnrollmentView = () => {
     };
 
     const handleSubmit = async () => {
+        alert("Submit button clicked! Checking console for details.");
+        console.log("Submit clicked", formData, file);
         setStatus('submitting');
-        const data = new FormData();
-        data.append('name', formData.name);
-        data.append('relation', formData.relation || 'Acquaintance');
-        data.append('notes', formData.notes);
-        data.append('file', file);
-        if (audioBlob) data.append('audio_file', audioBlob, 'voice.webm');
 
         try {
-            const res = await axios.post(`${API_BASE}/remember/person`, data, {
-                headers: { 'Content-Type': 'multipart/form-data' }
-            });
+            const data = new FormData();
+            data.append('name', formData.name);
+            data.append('relation', formData.relation || 'Acquaintance');
+            data.append('notes', formData.notes);
+            if (file) data.append('file', file);
+            if (audioBlob) data.append('audio_file', audioBlob, 'voice.webm');
+
+            console.log("Sending request to:", `${API_BASE}/remember/person`);
+
+            const res = await axios.post(`${API_BASE}/remember/person`, data);
+
+            console.log("Response:", res);
+
             if (res.data.status === 'stored') {
                 setStatus('success');
                 setTimeout(() => {
@@ -60,7 +66,8 @@ const EnrollmentView = () => {
                 }, 3000);
             }
         } catch (e) {
-            console.error(e);
+            console.error("Submission error:", e);
+            alert(`Error submitting: ${e.message}`);
             setStatus('error');
         }
     };

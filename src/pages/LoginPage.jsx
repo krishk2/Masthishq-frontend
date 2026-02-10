@@ -31,7 +31,7 @@ const LoginPage = ({ onSelectRole }) => {
 
         try {
             if (isLogin) {
-                // Login Flow (OAuth2 Form Data)
+                // Login Flow
                 const params = new URLSearchParams();
                 params.append('username', formData.email);
                 params.append('password', formData.password);
@@ -41,6 +41,7 @@ const LoginPage = ({ onSelectRole }) => {
 
                 localStorage.setItem('token', access_token);
                 localStorage.setItem('role', role);
+                axios.defaults.headers.common['Authorization'] = `Bearer ${access_token}`;
                 onSelectRole(role);
             } else {
                 // Register Flow
@@ -57,9 +58,11 @@ const LoginPage = ({ onSelectRole }) => {
                 params.append('password', formData.password);
                 const res = await axios.post(`${API_BASE}/auth/login`, params);
 
-                localStorage.setItem('token', res.data.access_token);
-                localStorage.setItem('role', res.data.role);
-                onSelectRole(role);
+                const { access_token, role: newRole } = res.data;
+                localStorage.setItem('token', access_token);
+                localStorage.setItem('role', newRole);
+                axios.defaults.headers.common['Authorization'] = `Bearer ${access_token}`;
+                onSelectRole(newRole);
             }
         } catch (err) {
             console.error(err);
@@ -144,14 +147,14 @@ const LoginPage = ({ onSelectRole }) => {
                             {error && <div className="error-msg">{error}</div>}
 
                             <button type="submit" className={`submit-btn ${role === 'patient' ? 'patient-btn' : 'caregiver-btn'}`} disabled={loading}>
-                                {loading ? <Loader2 className="animate-spin" /> : (isLogin ? 'Sign In' : 'Sign Up')}
+                                {loading ? <Loader2 className="animate-spin" /> : (isLogin ? 'Sign In' : 'Enroll')}
                             </button>
                         </form>
 
                         <div className="toggle-text">
-                            {isLogin ? "Don't have an account? " : "Already have an account? "}
+                            {isLogin ? "New to Masthishq? " : "Already enrolled? "}
                             <span onClick={() => { setIsLogin(!isLogin); setError(""); }}>
-                                {isLogin ? 'Sign Up' : 'Log In'}
+                                {isLogin ? 'Enroll Now' : 'Log In'}
                             </span>
                         </div>
                     </div>

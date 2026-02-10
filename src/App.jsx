@@ -11,6 +11,7 @@ import { Maximize2, Minimize2 } from 'lucide-react';
 import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
 import CaregiverDashboard from './pages/CaregiverDashboard';
+import PatientQuiz from './components/PatientQuiz';
 import NavBar from './components/SideNav'; // Imported as NavBar
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:8000/api/v1";
@@ -85,6 +86,9 @@ function App() {
     localStorage.removeItem('role');
     delete axios.defaults.headers.common['Authorization'];
     setView('landing');
+    setMode('person');
+    setCurrentPerson(null);
+    setMessages([{ role: 'bot', text: "Hello! Show me a face or object, or ask me a question." }]);
   };
 
   const handleSuggestionClick = (text) => {
@@ -308,6 +312,8 @@ function App() {
   }
   else if (view === 'caregiver') {
     content = <CaregiverDashboard />;
+  } else if (view === 'quiz') {
+    content = <PatientQuiz onFinish={() => setView('patient')} />;
   } else {
     // Patient App Content
     content = (

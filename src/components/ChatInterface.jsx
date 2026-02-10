@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Send, Volume2, User, Package, UserPlus, PackagePlus, Sparkles, Camera, X, Plus } from 'lucide-react';
+import { Send, Volume2, User, Package, UserPlus, PackagePlus, Sparkles, Camera, X, Plus, Mic, MicOff } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import CameraView from './CameraView'; // Import CameraView
 
@@ -23,8 +23,44 @@ function ChatInterface({
     const [showTools, setShowTools] = useState(false);
     const [showCamera, setShowCamera] = useState(false);
     const [cameraMode, setCameraMode] = useState('person');
+    const [isListening, setIsListening] = useState(false);
     const endRef = useRef(null);
     const containerRef = useRef(null);
+    const recognitionRef = useRef(null);
+
+    const toggleVoiceInput = () => {
+        if (isListening) {
+            recognitionRef.current?.stop();
+            setIsListening(false);
+            return;
+        }
+
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SpeechRecognition) {
+            alert("Voice input not supported in this browser.");
+            return;
+        }
+
+        const recognition = new SpeechRecognition();
+        recognition.lang = 'en-US';
+        recognition.continuous = false;
+        recognition.interimResults = true;
+
+        recognition.onstart = () => setIsListening(true);
+        recognition.onend = () => setIsListening(false);
+
+        recognition.onresult = (event) => {
+            const transcript = Array.from(event.results)
+                .map(result => result[0])
+                .map(result => result.transcript)
+                .join('');
+
+            setInput(transcript);
+        };
+
+        recognitionRef.current = recognition;
+        recognition.start();
+    };
 
     useEffect(() => {
         endRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -246,6 +282,15 @@ function ChatInterface({
                         style={{ minHeight: '44px', maxHeight: '200px' }}
                         className="flex-1 bg-transparent text-white px-2 py-3 text-[15px] outline-none placeholder:text-slate-500 disabled:opacity-50 resize-none font-medium leading-relaxed"
                     />
+
+                    <button
+                        onClick={toggleVoiceInput}
+                        className={`p-2 mb-1 rounded-xl transition-all duration-200 ${isListening
+                            ? 'bg-red-500 text-white animate-pulse shadow-red-500/50 shadow-lg'
+                            : 'text-slate-400 hover:text-white hover:bg-slate-700/50'}`}
+                    >
+                        {isListening ? <MicOff size={20} /> : <Mic size={20} />}
+                    </button>
 
                     <button
                         onClick={handleSend}

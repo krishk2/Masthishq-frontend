@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Home, Users, Settings, Menu, Brain, Bell, LogOut } from 'lucide-react';
 import { subscribeToPush } from '../utils/push';
 
-const NavBar = ({ onViewChange, currentView }) => {
+const NavBar = ({ onViewChange, currentView, onLogout }) => {
     const [pushEnabled, setPushEnabled] = useState(false);
 
     const handlePushEnable = async () => {
@@ -35,6 +35,11 @@ const NavBar = ({ onViewChange, currentView }) => {
                         <span>Patient</span>
                     </div>
 
+                    <div className={`nav-item ${currentView === 'quiz' ? 'active' : ''}`} onClick={() => onViewChange('quiz')}>
+                        <Brain size={20} />
+                        <span>Daily Quiz</span>
+                    </div>
+
                     <div className={`nav-item ${currentView === 'caregiver' ? 'active' : ''}`} onClick={() => onViewChange('caregiver')}>
                         <Settings size={20} />
                         <span>Caregiver</span>
@@ -45,10 +50,12 @@ const NavBar = ({ onViewChange, currentView }) => {
                         <span>{pushEnabled ? 'On' : 'Enable Push'}</span>
                     </div>
 
-                    <div className="nav-item logout-btn" onClick={onLogout}>
-                        <LogOut size={20} />
-                        <span>Logout</span>
-                    </div>
+                    {currentView !== 'landing' && (
+                        <div className="nav-item logout-btn" onClick={onLogout}>
+                            <LogOut size={20} />
+                            <span>Logout</span>
+                        </div>
+                    )}
                 </div>
             </div>
 
