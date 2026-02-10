@@ -38,7 +38,14 @@ export const subscribeToPush = async (apiBase) => {
         const registration = await navigator.serviceWorker.register('/sw.js');
         console.log("SW Registered:", registration);
 
-        // 2. Get VAPID Key from Backend
+        // 2.5 Unsubscribe existing if any (Invalidates old keys)
+        const existingSub = await registration.pushManager.getSubscription();
+        if (existingSub) {
+            console.log("Unsubscribing old subscription...");
+            await existingSub.unsubscribe();
+        }
+
+        // 3. Get VAPID Key from Backend
         const keyRes = await axios.get(`${apiBase}/reminders/vapid-key`);
         const publicKey = keyRes.data.public_key;
 
@@ -47,7 +54,7 @@ export const subscribeToPush = async (apiBase) => {
             return false;
         }
 
-        // 3. Subscribe
+        // 4. Subscribe (New)
         const subscription = await registration.pushManager.subscribe({
             userVisibleOnly: true,
             applicationServerKey: urlBase64ToUint8Array(publicKey)
