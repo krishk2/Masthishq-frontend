@@ -1,8 +1,175 @@
 import React, { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
 import { ArrowRight, Check, Camera, Mic, UploadCloud, Activity, UserPlus, List, CheckCircle, Circle, Trash2, RefreshCw } from 'lucide-react';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
 
-/* ... existing imports ... */
+const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:8000/api/v1";
+
+const EnrollmentView = () => {
+    const [step, setStep] = useState(1);
+    const [name, setName] = useState('');
+    const [relation, setRelation] = useState('');
+    const [notes, setNotes] = useState('');
+    const [images, setImages] = useState([]);
+    const [preview, setPreview] = useState(null);
+    const [isRecording, setIsRecording] = useState(false);
+    const fileInputRef = useRef(null);
+
+    const handleImageUpload = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            setImages([file]);
+            setPreview(URL.createObjectURL(file));
+        }
+    };
+
+    const toggleRecording = () => {
+        setIsRecording(!isRecording);
+        // Logic for recording would go here
+    };
+
+    const handleSubmit = async () => {
+        const formData = new FormData();
+        formData.append('name', name);
+        formData.append('relation', relation);
+        formData.append('notes', notes);
+        if (images[0]) formData.append('files', images[0]);
+        // Audio would be appended here if implemented
+
+        try {
+            await axios.post(`${API_BASE}/memory/learn_face`, formData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
+            setStep(5);
+        } catch (e) {
+            alert("Enrollment failed");
+        }
+    };
+
+    return (
+        <div className="enroll-wrapper">
+            <div className="progress-bar" style={{ width: `${(step / 5) * 100}%` }}></div>
+
+            {step === 1 && (
+                <div className="step-content">
+                    <div className="step-number">01 <ArrowRight size={16} /> WHO IS IT?</div>
+                    <h1 className="question">What is their name?</h1>
+                    <p className="sub-text">We'll use this to identify them.</p>
+                    <input className="big-input" value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Sarah" autoFocus />
+                    <button className="btn-next" onClick={() => setStep(2)}>Next <ArrowRight /></button>
+                </div>
+            )}
+
+            {step === 2 && (
+                <div className="step-content">
+                    <div className="step-number">02 <ArrowRight size={16} /> RELATIONSHIP</div>
+                    <h1 className="question">Who are they to the patient?</h1>
+                    <input className="big-input" value={relation} onChange={e => setRelation(e.target.value)} placeholder="e.g. Daughter" autoFocus />
+                    <button className="btn-next" onClick={() => setStep(3)}>Next <ArrowRight /></button>
+                </div>
+            )}
+
+            {step === 3 && (
+                <div className="step-content">
+                    <div className="step-number">03 <ArrowRight size={16} /> CONTEXT</div>
+                    <h1 className="question">Any important memories?</h1>
+                    <textarea className="big-input textarea" value={notes} onChange={e => setNotes(e.target.value)} placeholder="She lives in Chicago..." />
+                    <button className="btn-next" onClick={() => setStep(4)}>Next <ArrowRight /></button>
+                </div>
+            )}
+
+            {step === 4 && (
+                <div className="step-content">
+                    <div className="step-number">04 <ArrowRight size={16} /> APPEARANCE</div>
+                    <h1 className="question">Upload a clear photo.</h1>
+                    <div className="upload-box" onClick={() => fileInputRef.current.click()}>
+                        {preview ? <img src={preview} className="preview-img" alt="Preview" /> : <Camera size={48} className="text-gray-400 mx-auto mb-2" />}
+                        <p>Click to upload</p>
+                    </div>
+                    <input type="file" ref={fileInputRef} hidden onChange={handleImageUpload} />
+
+                    <div className="voice-opt">
+                        <button className={`btn-next ${isRecording ? 'bg-red-500' : 'bg-blue-500'}`} onClick={toggleRecording}>
+                            <Mic /> {isRecording ? "Stop Recording" : "Record Voice Sample (Optional)"}
+                        </button>
+                    </div>
+
+                    <button className="btn-submit" onClick={handleSubmit}>Finish Enrollment</button>
+                </div>
+            )}
+
+            {step === 5 && (
+                <div className="success-screen">
+                    <CheckCircle size={80} color="#10b981" className="mb-4" />
+                    <h1>Enrolled Successfully!</h1>
+                    <p className="sub-text">The patient will now recognize {name}.</p>
+                    <button className="btn-next" onClick={() => { setStep(1); setName(''); setPreview(null); }}>Enroll Another</button>
+                </div>
+            )}
+        </div>
+    );
+};
+
+const AnalyticsView = () => {
+    const [stats, setStats] = useState(null);
+
+    useEffect(() => {
+        const fetchStats = async () => {
+            try {
+                const res = await axios.get(`${API_BASE}/quiz/stats`);
+                setStats(res.data);
+            } catch (e) {
+                console.error("Failed to fetch stats", e);
+            }
+        };
+        fetchStats();
+    }, []);
+
+    if (!stats) return <div>Loading Analytics...</div>;
+
+    return (
+        <div className="analytics-container">
+            <div className="stats-header">
+                <div className="stat-card">
+                    <h3>Average Accuracy</h3>
+                    <div className="stat-value">{(stats.average_score * 100).toFixed(0)}%</div>
+                </div>
+                <div className="stat-card">
+                    <h3>Quizzes Taken</h3>
+                    <div className="stat-value">{stats.total_quizzes}</div>
+                </div>
+            </div>
+
+            <div className="chart-wrapper">
+                <h3>Memory Recall Trend</h3>
+                <div style={{ height: 300 }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={stats.history}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                            <XAxis dataKey="date" stroke="#94a3b8" />
+                            <YAxis stroke="#94a3b8" />
+                            <RechartsTooltip contentStyle={{ backgroundColor: '#1e293b', border: 'none' }} />
+                            <Line type="monotone" dataKey="score" stroke="#8b5cf6" strokeWidth={3} dot={{ r: 4 }} />
+                        </LineChart>
+                    </ResponsiveContainer>
+                </div>
+            </div>
+
+            <div className="recent-activity">
+                <h3>Recent Activity</h3>
+                {stats.history.map((item, idx) => (
+                    <div key={idx} className="activity-item">
+                        <span>{item.date}</span>
+                        <span>{item.type} Quiz</span>
+                        <span className={`score-badge ${item.score > 0.8 ? 'high' : item.score > 0.5 ? 'med' : 'low'}`}>
+                            {(item.score * 100).toFixed(0)}%
+                        </span>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+};
 
 const TaskTrackerView = () => {
     const [tasks, setTasks] = useState([]);
@@ -123,7 +290,6 @@ const CaregiverDashboard = () => {
             </div>
 
             <style>{`
-                /* ... existing styles ... */
                 .dashboard-container {
                     min-height: 100vh;
                     background: #0f172a;
