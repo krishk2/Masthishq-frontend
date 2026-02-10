@@ -108,7 +108,9 @@ function App() {
         setEnrollData(null);
       } catch (e) {
         console.error(e);
-        addBotMessage("Failed to enroll.");
+        const errMsg = e.response?.data?.detail || "Failed to enroll. Please try again.";
+        addBotMessage(errMsg);
+        speakResponse(errMsg);
       } finally {
         setIsProcessing(false);
       }

@@ -17,6 +17,7 @@ const AvatarCanvas = ({ isSpeaking, isProcessing, message, processingStatus }) =
 
             {/* Avatar GIF */}
             <div className="relative z-10 flex flex-col items-center justify-center h-full w-full p-6">
+
                 {/* Image Container */}
                 <div className="relative w-full max-w-lg aspect-square flex items-center justify-center">
                     <img

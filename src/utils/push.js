@@ -22,7 +22,19 @@ export const subscribeToPush = async (apiBase) => {
     }
 
     try {
-        // 1. Register Service Worker
+        // 1. Check Permission First
+        if (Notification.permission === 'denied') {
+            alert("Please enable notification permissions in your browser settings for this site.");
+            return false;
+        }
+
+        const permission = await Notification.requestPermission();
+        if (permission !== 'granted') {
+            console.error("Permission not granted for Notification");
+            return false;
+        }
+
+        // 2. Register Service Worker
         const registration = await navigator.serviceWorker.register('/sw.js');
         console.log("SW Registered:", registration);
 
