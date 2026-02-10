@@ -1,258 +1,103 @@
 import React, { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
-import { ArrowRight, Check, Camera, Mic, UploadCloud, Activity, UserPlus } from 'lucide-react';
-import AudioRecorder from '../components/AudioRecorder';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { ArrowRight, Check, Camera, Mic, UploadCloud, Activity, UserPlus, List, CheckCircle, Circle, Trash2, RefreshCw } from 'lucide-react';
 
-/*
-  Caregiver Dashboard
-  - Tab 1: Enrollment (Typeform Style)
-  - Tab 2: Analytics (Memory Progress)
-*/
+/* ... existing imports ... */
 
-const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:8000/api/v1";
-
-const EnrollmentView = () => {
-    const [step, setStep] = useState(0);
-    const [formData, setFormData] = useState({ name: '', relation: '', notes: '', age: '' });
-    const [file, setFile] = useState(null);
-    const [filePreview, setFilePreview] = useState(null);
-    const [audioBlob, setAudioBlob] = useState(null);
-    const [status, setStatus] = useState(null);
-    const inputRef = useRef(null);
-
-    useEffect(() => {
-        if (inputRef.current) inputRef.current.focus();
-    }, [step]);
-
-    const handleNext = () => {
-        if (step === 0 && !formData.name) return alert("Please enter a name.");
-        if (step === 2 && !file) return alert("Please upload a photo.");
-        setStep(prev => prev + 1);
-    };
-
-    const handleKeyDown = (e) => {
-        if (e.key === 'Enter' && step !== 3) handleNext();
-    };
-
-    const handleSubmit = async () => {
-        alert("Submit button clicked! Checking console for details.");
-        console.log("Submit clicked", formData, file);
-        setStatus('submitting');
-
-        try {
-            const data = new FormData();
-            data.append('name', formData.name);
-            data.append('relation', formData.relation || 'Acquaintance');
-            data.append('notes', formData.notes);
-            if (file) data.append('file', file);
-            if (audioBlob) data.append('audio_file', audioBlob, 'voice.webm');
-
-            console.log("Sending request to:", `${API_BASE}/remember/person`);
-
-            const res = await axios.post(`${API_BASE}/remember/person`, data);
-
-            console.log("Response:", res);
-
-            if (res.data.status === 'stored') {
-                setStatus('success');
-                setTimeout(() => {
-                    setStep(0);
-                    setFormData({ name: '', relation: '', notes: '', age: '' });
-                    setFile(null);
-                    setFilePreview(null);
-                    setAudioBlob(null);
-                    setStatus(null);
-                }, 3000);
-            }
-        } catch (e) {
-            console.error("Submission error:", e);
-            alert(`Error submitting: ${e.message}`);
-            setStatus('error');
-        }
-    };
-
-    if (status === 'success') {
-        return (
-            <div className="success-screen">
-                <h1>All done! 🎉</h1>
-                <p>Memory has been securely stored.</p>
-            </div>
-        );
-    }
-
-    const renderStep = () => {
-        switch (step) {
-            case 0:
-                return (
-                    <div className="step-content">
-                        <h2 className="step-number">1 <span className="arrow">→</span></h2>
-                        <h1 className="question">What is the person's name?</h1>
-                        <p className="sub-text">We'll use this to identify them.</p>
-                        <input
-                            ref={inputRef}
-                            className="big-input"
-                            placeholder="Type name..."
-                            value={formData.name}
-                            onChange={e => setFormData({ ...formData, name: e.target.value })}
-                            onKeyDown={handleKeyDown}
-                        />
-                        <button className="btn-next" onClick={handleNext}>OK <Check size={18} /></button>
-                    </div>
-                );
-            case 1:
-                return (
-                    <div className="step-content">
-                        <h2 className="step-number">2 <span className="arrow">→</span></h2>
-                        <h1 className="question">How are they related?</h1>
-                        <p className="sub-text">Sister, Doctor, Old Friend...</p>
-                        <input
-                            ref={inputRef}
-                            className="big-input"
-                            placeholder="Type relationship..."
-                            value={formData.relation}
-                            onChange={e => setFormData({ ...formData, relation: e.target.value })}
-                            onKeyDown={handleKeyDown}
-                        />
-                        <button className="btn-next" onClick={handleNext}>OK <Check size={18} /></button>
-                    </div>
-                );
-            case 2:
-                return (
-                    <div className="step-content">
-                        <h2 className="step-number">3 <span className="arrow">→</span></h2>
-                        <h1 className="question">Upload a photo.</h1>
-                        <p className="sub-text">A clear face photo works best.</p>
-
-                        <div className="upload-box" onClick={() => document.getElementById('file-upload').click()}>
-                            {filePreview ? (
-                                <img src={filePreview} className="preview-img" alt="Preview" />
-                            ) : (
-                                <div className="upload-placeholder">
-                                    <Camera size={48} className="icon-pulse" />
-                                    <span>Click to Upload</span>
-                                </div>
-                            )}
-                            <input id="file-upload" type="file" accept="image/*" onChange={e => {
-                                const f = e.target.files[0];
-                                if (f) { setFile(f); setFilePreview(URL.createObjectURL(f)); }
-                            }} hidden />
-                        </div>
-
-                        {file && <button className="btn-next" onClick={handleNext}>OK <Check size={18} /></button>}
-                    </div>
-                );
-            case 3:
-                return (
-                    <div className="step-content">
-                        <h2 className="step-number">4 <span className="arrow">→</span></h2>
-                        <h1 className="question">Any context or notes?</h1>
-                        <p className="sub-text">"She likes coffee", "He is your neighbor"...</p>
-                        <textarea
-                            ref={inputRef}
-                            className="big-input textarea"
-                            placeholder="Type here..."
-                            value={formData.notes}
-                            onChange={e => setFormData({ ...formData, notes: e.target.value })}
-                        />
-
-                        <div className="voice-opt">
-                            <span style={{ opacity: 0.7, marginRight: 10 }}>Voice Sample (Optional):</span>
-                            <AudioRecorder onRecordingComplete={setAudioBlob} />
-                        </div>
-
-                        <button className="btn-submit" onClick={handleSubmit}>
-                            {status === 'submitting' ? 'Saving...' : 'Submit'}
-                        </button>
-                    </div>
-                );
-            default: return null;
-        }
-    };
-
-    return (
-        <div className="enroll-wrapper">
-            <div className="progress-bar" style={{ width: `${(step + 1) * 25}%` }}></div>
-            {renderStep()}
-        </div>
-    );
-}
-
-const AnalyticsView = () => {
-    const [stats, setStats] = useState(null);
+const TaskTrackerView = () => {
+    const [tasks, setTasks] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [generating, setGenerating] = useState(false);
+
+    const fetchTasks = async () => {
+        try {
+            const res = await axios.get(`${API_BASE}/caregiver/tasks`);
+            setTasks(res.data);
+        } catch (error) {
+            console.error("Failed to fetch tasks", error);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     useEffect(() => {
-        const fetchStats = async () => {
-            try {
-                const res = await axios.get(`${API_BASE}/quiz/stats`);
-                setStats(res.data);
-            } catch (error) {
-                console.error("Failed to fetch stats", error);
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchStats();
+        fetchTasks();
     }, []);
 
-    if (loading) return <div className="flex-center">Loading Analytics...</div>;
+    const handleGenerate = async () => {
+        setGenerating(true);
+        try {
+            // Mock patient ID for now or use context if avail
+            await axios.post(`${API_BASE}/caregiver/tasks/generate?patient_id=test_patient`);
+            fetchTasks();
+        } catch (e) {
+            alert("Failed to generate tasks: " + e.message);
+        } finally {
+            setGenerating(false);
+        }
+    };
 
-    if (!stats || stats.history.length === 0) return (
-        <div className="empty-state">
-            <h2>No Memory Data Yet</h2>
-            <p>Once the patient starts interacting with the memory quiz, data will appear here.</p>
-        </div>
-    );
+    const toggleStatus = async (task) => {
+        const newStatus = task.status === 'pending' ? 'done' : 'pending';
+        // Optimistic update
+        setTasks(prev => prev.map(t => t._id === task._id ? { ...t, status: newStatus } : t));
+        try {
+            await axios.patch(`${API_BASE}/caregiver/tasks/${task._id}?status=${newStatus}`);
+        } catch (e) {
+            console.error("Failed to update task", e);
+            fetchTasks(); // Revert on error
+        }
+    };
+
+    const deleteTask = async (id) => {
+        if (!confirm("Delete this task?")) return;
+        setTasks(prev => prev.filter(t => t._id !== id));
+        try {
+            await axios.delete(`${API_BASE}/caregiver/tasks/${id}`);
+        } catch (e) {
+            console.error(e);
+            fetchTasks();
+        }
+    };
+
+    if (loading) return <div className="flex-center">Loading Tasks...</div>;
 
     return (
-        <div className="analytics-container">
-            <div className="stats-header">
-                <div className="stat-card">
-                    <h3>Average Accuracy</h3>
-                    <div className="stat-value">{(stats.average_score * 100).toFixed(1)}%</div>
-                </div>
-                <div className="stat-card">
-                    <h3>Total Interactions</h3>
-                    <div className="stat-value">{stats.total_quizzes}</div>
-                </div>
+        <div className="tasks-container">
+            <div className="tasks-header">
+                <h2>Suggested Caregiver Tasks</h2>
+                <button className="btn-generate" onClick={handleGenerate} disabled={generating}>
+                    {generating ? <RefreshCw className="spin" size={20} /> : <RefreshCw size={20} />}
+                    {generating ? 'Analyzing Chat...' : 'Analyze Chat'}
+                </button>
             </div>
 
-            <div className="chart-wrapper">
-                <h3>Memory Recall Trend</h3>
-                <ResponsiveContainer width="100%" height={300}>
-                    <LineChart data={stats.history}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                        <XAxis dataKey="date" stroke="#94a3b8" tickFormatter={(t) => t.split(' ')[0]} />
-                        <YAxis stroke="#94a3b8" domain={[0, 1]} />
-                        <Tooltip
-                            contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155' }}
-                            itemStyle={{ color: '#a78bfa' }}
-                        />
-                        <Line type="monotone" dataKey="score" stroke="#8b5cf6" strokeWidth={3} activeDot={{ r: 8 }} />
-                    </LineChart>
-                </ResponsiveContainer>
-            </div>
-
-            <div className="recent-activity">
-                <h3>Recent Activity</h3>
-                <ul>
-                    {stats.history.slice(0, 5).map((item, idx) => (
-                        <li key={idx} className="activity-item">
-                            <span>{item.date}</span>
-                            <span className={`score-badge ${item.score > 0.8 ? 'high' : item.score > 0.5 ? 'med' : 'low'}`}>
-                                {(item.score * 100).toFixed(0)}%
-                            </span>
+            {tasks.length === 0 ? (
+                <div className="empty-state">
+                    <p>No tasks found. Click "Analyze Chat" to find insights from recent conversations.</p>
+                </div>
+            ) : (
+                <ul className="task-list">
+                    {tasks.map(task => (
+                        <li key={task._id} className={`task-item ${task.status}`}>
+                            <div className="task-left" onClick={() => toggleStatus(task)}>
+                                {task.status === 'done' ? <CheckCircle className="check-icon done" /> : <Circle className="check-icon" />}
+                                <div>
+                                    <span className="task-desc">{task.description}</span>
+                                    <span className={`task-tag ${task.category}`}>{task.category}</span>
+                                </div>
+                            </div>
+                            <button className="btn-del" onClick={() => deleteTask(task._id)}><Trash2 size={18} /></button>
                         </li>
                     ))}
                 </ul>
-            </div>
+            )}
         </div>
     );
 };
 
 const CaregiverDashboard = () => {
-    const [activeTab, setActiveTab] = useState('enroll'); // 'enroll' | 'analytics'
+    const [activeTab, setActiveTab] = useState('enroll'); // 'enroll' | 'analytics' | 'tasks'
 
     return (
         <div className="dashboard-container">
@@ -261,6 +106,10 @@ const CaregiverDashboard = () => {
                     <UserPlus size={20} />
                     Enrollment
                 </div>
+                <div className={`tab ${activeTab === 'tasks' ? 'active' : ''}`} onClick={() => setActiveTab('tasks')}>
+                    <List size={20} />
+                    Tasks
+                </div>
                 <div className={`tab ${activeTab === 'analytics' ? 'active' : ''}`} onClick={() => setActiveTab('analytics')}>
                     <Activity size={20} />
                     Analytics
@@ -268,10 +117,13 @@ const CaregiverDashboard = () => {
             </div>
 
             <div className="dashboard-content">
-                {activeTab === 'enroll' ? <EnrollmentView /> : <AnalyticsView />}
+                {activeTab === 'enroll' && <EnrollmentView />}
+                {activeTab === 'tasks' && <TaskTrackerView />}
+                {activeTab === 'analytics' && <AnalyticsView />}
             </div>
 
             <style>{`
+                /* ... existing styles ... */
                 .dashboard-container {
                     min-height: 100vh;
                     background: #0f172a;
@@ -373,6 +225,32 @@ const CaregiverDashboard = () => {
                 .success-screen { height: 50vh; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
                 .success-screen h1 { font-size: 3rem; color: #10b981; }
                 .voice-opt { margin-bottom: 30px; display: flex; align-items: center; }
+
+                /* TASKS STYLES */
+                .tasks-container { max-width: 800px; margin: 0 auto; padding: 20px; }
+                .tasks-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+                .btn-generate { background: #3b82f6; color: white; border: none; padding: 10px 20px; border-radius: 8px; display: flex; align-items: center; gap: 10px; cursor: pointer; }
+                .btn-generate:hover { background: #2563eb; }
+                .spin { animation: spin 1s linear infinite; }
+                @keyframes spin { 100% { transform: rotate(360deg); } }
+
+                .task-list { list-style: none; padding: 0; }
+                .task-item { display: flex; justify-content: space-between; align-items: center; background: rgba(30, 41, 59, 0.5); padding: 15px 20px; margin-bottom: 10px; border-radius: 12px; transition: 0.2s; border: 1px solid transparent; }
+                .task-item:hover { border-color: #475569; }
+                .task-item.done { opacity: 0.5; }
+                .task-item.done .task-desc { text-decoration: line-through; }
+                
+                .task-left { display: flex; align-items: center; gap: 15px; cursor: pointer; flex: 1; }
+                .check-icon { color: #64748b; }
+                .check-icon.done { color: #10b981; }
+                
+                .task-tag { font-size: 0.75rem; padding: 2px 8px; border-radius: 4px; margin-left: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+                .task-tag.health { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
+                .task-tag.social { background: rgba(139, 92, 246, 0.2); color: #8b5cf6; }
+                .task-tag.logistics { background: rgba(59, 130, 246, 0.2); color: #3b82f6; }
+                
+                .btn-del { background: transparent; border: none; color: #ef4444; opacity: 0.5; cursor: pointer; padding: 5px; }
+                .btn-del:hover { opacity: 1; background: rgba(239, 68, 68, 0.1); border-radius: 4px; }
             `}</style>
         </div>
     );
